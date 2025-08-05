@@ -14,6 +14,7 @@
   "anthropic_api_key",
   "openai_api_key",
   "gemini_api_key",
+  "local_api_base",
   "env_section",
   "global_env"
  ],
@@ -55,6 +56,12 @@
    "fieldname": "gemini_api_key",
    "fieldtype": "Password",
    "label": "Gemini API Key (Google)"
+  },
+  {
+   "fieldname": "local_api_base",
+   "fieldtype": "Data",
+   "label": "Local LLM Server URL",
+   "description": "Base URL for local LLM server (e.g., http://localhost:1234/v1 for LM Studio, http://localhost:11434/v1 for Ollama)"
   },
   {
    "default": "30",

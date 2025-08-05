@@ -418,10 +418,20 @@ def _set_key(model: str) -> str | None:
 	if not key:
 		return f"Model {model} not supported"
 
-	if not value:
-		return f"API key {key} not set"
-
-	os.environ[key] = value
+	if provider == "Local":
+		# For local models, configure the base URL
+		if value:
+			os.environ["OPENAI_API_BASE"] = value
+			# Set a dummy key if not already set (required by some local servers)
+			if "OPENAI_API_KEY" not in os.environ:
+				os.environ["OPENAI_API_KEY"] = "dummy-key-for-local"
+		else:
+			return f"Local API base URL not configured"
+	else:
+		if not value:
+			return f"API key {key} not set"
+		os.environ[key] = value
+	
 	return None
 
 

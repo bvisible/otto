@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Literal, NamedTuple, TypedDict, TypeGuard
 
-Provider = Literal["Anthropic", "OpenAI", "Google"]
+Provider = Literal["Anthropic", "OpenAI", "Google", "Local"]
 ModelSize = Literal["Very Small", "Small", "Medium", "Large"]
 
 ID = str

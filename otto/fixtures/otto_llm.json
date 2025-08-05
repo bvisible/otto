@@ -178,5 +178,65 @@
   "size": "Small",
   "supports_images": 1,
   "title": "OpenAI GPT-4.1 mini"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Otto LLM",
+  "enabled": 0,
+  "is_reasoning": 0,
+  "modified": "2025-08-05 12:00:00.000000",
+  "name": "local/llama-3.3-70b",
+  "provider": "Local",
+  "size": "Large",
+  "supports_images": 0,
+  "title": "Llama 3.3 70B (Local)"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Otto LLM",
+  "enabled": 0,
+  "is_reasoning": 0,
+  "modified": "2025-08-05 12:00:00.000000",
+  "name": "local/qwen-2.5-72b",
+  "provider": "Local",
+  "size": "Large",
+  "supports_images": 1,
+  "title": "Qwen 2.5 72B (Local)"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Otto LLM",
+  "enabled": 0,
+  "is_reasoning": 0,
+  "modified": "2025-08-05 12:00:00.000000",
+  "name": "local/mistral-large",
+  "provider": "Local",
+  "size": "Large",
+  "supports_images": 0,
+  "title": "Mistral Large (Local)"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Otto LLM",
+  "enabled": 0,
+  "is_reasoning": 0,
+  "modified": "2025-08-05 12:00:00.000000",
+  "name": "ollama/llama3.2",
+  "provider": "Local",
+  "size": "Small",
+  "supports_images": 0,
+  "title": "Llama 3.2 (Ollama)"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Otto LLM",
+  "enabled": 0,
+  "is_reasoning": 0,
+  "modified": "2025-08-05 12:00:00.000000",
+  "name": "ollama/phi3",
+  "provider": "Local",
+  "size": "Very Small",
+  "supports_images": 0,
+  "title": "Phi 3 (Ollama)"
  }
 ]

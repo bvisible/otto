@@ -415,6 +415,9 @@ def get_provider(model: str) -> Provider | None:
 
 	elif model.startswith("gemini"):
 		return "Google"
+	
+	elif any(model.startswith(prefix) for prefix in ["local/", "ollama/", "together_ai/", "vllm/", "openai/"]):
+		return "Local"
 
 	return None
 
@@ -428,6 +431,8 @@ def get_provider_key(provider: Provider):
 			return "ANTHROPIC_API_KEY"
 		case "Google":
 			return "GEMINI_API_KEY"
+		case "Local":
+			return "LOCAL_API_BASE"
 		case _:
 			return None
 
