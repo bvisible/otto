@@ -2,18 +2,16 @@ from __future__ import annotations
 
 # Copyright (c) 2025, Alan Tom and contributors
 # For license information, please see license.txt
-import json
 from typing import TYPE_CHECKING, cast
 
 import frappe
 import frappe.realtime
 from frappe.model.document import Document
 
-from otto.llm.types import ModelSize, Provider
 from otto.llm.utils import DEFAULT_INSTRUCTION, is_reasoning_effort
 
 if TYPE_CHECKING:
-	from otto.llm.types import ReasoningEffort
+	from otto.llm.types import ModelSize, Provider, ReasoningEffort
 
 
 class OttoLLM(Document):
@@ -42,7 +40,7 @@ class OttoLLM(Document):
 		is_reasoning: bool = False,
 		supports_vision: bool = False,
 	):
-		doc = cast(OttoLLM, frappe.get_doc({"doctype": "Otto LLM"}))
+		doc = cast("OttoLLM", frappe.get_doc({"doctype": "Otto LLM"}))
 
 		doc.name = name
 		doc.title = title
@@ -72,30 +70,27 @@ class OttoLLM(Document):
 
 			for chunk in stream:
 				frappe.realtime.publish_realtime(
-					f"stream-llm-{self.name}",
+					"stream-llm",
 					{
 						"llm": self.name,
 						"chunk": chunk,
 					},
+					user=frappe.session.user,
 				)
 		except Exception as e:
-			return json.dumps({"error": str(e)})
+			return {"error": str(e)}
+
+		if stream.failure_reason:
+			return {"error": stream.failure_reason}
 
 		if stream.item is None:
 			return {
 				"message": "success",
-				"input_tokens": 0,
-				"output_tokens": 0,
-				"cost": 0,
-				"duration": 0,
 			}
 
 		return {
 			"message": "success",
-			"input_tokens": stream.item["meta"]["input_tokens"],
-			"output_tokens": stream.item["meta"]["output_tokens"],
-			"cost": stream.item["meta"]["cost"],
-			"duration": stream.item["meta"]["end_time"] - stream.item["meta"]["start_time"],
+			"item": stream.item,
 		}
 
 
@@ -103,7 +98,7 @@ def get_reasoning_effort(effort: str | None, llm: OttoLLM | None = None) -> Reas
 	if not effort:
 		return None
 
-	if llm and not llm.is_reasoning or not is_reasoning_effort(effort):
+	if (llm and not llm.is_reasoning) or not is_reasoning_effort(effort):
 		return None
 
 	return effort

@@ -73,7 +73,7 @@ class SessionViewer {
 
 	select_session(wrapper) {
 		frappe.call({
-			method: "otto.otto.page.view_otto_session.session_view.get_recent_sessions",
+			method: "otto.api.session_view.get_recent_sessions",
 			args: { page: 0, limit: 20 },
 			callback: (r) => show_session_dialog(r.message),
 		});
@@ -81,7 +81,7 @@ class SessionViewer {
 
 	get_adjacent_session(next) {
 		frappe.call({
-			method: "otto.otto.page.view_otto_session.session_view.get_adjacent_session",
+			method: "otto.api.session_view.get_adjacent_session",
 			args: { name: this.session, next },
 			callback: (r) => {
 				if (r.message) {
@@ -208,7 +208,7 @@ function feedback(session) {
 
 	const field = dialog.get_field("thumb_buttons");
 	const thumbs_html = `
-			<p>Was this task handled correctly?</p>
+			<p>Was Otto helpful?</p>
 			<div class="btn-group" role="group">
 				<button type="button" class="btn btn-default"  name="up">
 					&#128077;

@@ -15,7 +15,10 @@ from urllib.request import urlopen
 import frappe
 
 from otto import utils
-from otto.llm.types import Provider, ReasoningEffort, Session, ToolUseContent
+from otto.llm.types import SessionStats, SessionToolUseStats
+
+if TYPE_CHECKING:
+	from otto.llm.types import Provider, ReasoningEffort, Session, ToolUseContent
 
 MAX_RETRIES = 6
 DEFAULT_INSTRUCTION = "You are a helpful assistant."
@@ -28,7 +31,7 @@ DEFAULT_REASONING_BUDGET_MAP: dict[ReasoningEffort, int] = {
 
 
 if TYPE_CHECKING:
-	from otto.llm.types import SessionItem, SessionMeta, ToolUseUpdate, UserContent
+	from otto.llm.types import Meta, SessionItem, ToolUseUpdate, UserContent
 
 
 def get_sequence(session: Session) -> list[SessionItem]:
@@ -61,7 +64,7 @@ def get_sequence(session: Session) -> list[SessionItem]:
 
 
 def get_user_item(content: list[UserContent] | None = None):
-	meta: SessionMeta = {
+	meta: Meta = {
 		"role": "user",
 		"model": None,
 		"input_tokens": 0,
@@ -71,6 +74,8 @@ def get_user_item(content: list[UserContent] | None = None):
 		"start_time": 0,
 		"end_time": 0,
 		"end_reason": None,
+		"time_to_first_chunk": 0,
+		"inter_chunk_latency": 0,
 	}
 
 	item: SessionItem = {
@@ -88,7 +93,7 @@ def get_user_item(content: list[UserContent] | None = None):
 
 
 def get_agent_item(model: str):
-	meta: SessionMeta = {
+	meta: Meta = {
 		"role": "agent",
 		"model": model,
 		"timestamp": datetime.datetime.now().timestamp(),
@@ -98,6 +103,8 @@ def get_agent_item(model: str):
 		"end_time": 0,
 		"end_reason": None,
 		"cost": 0,
+		"time_to_first_chunk": 0,
+		"inter_chunk_latency": 0,
 	}
 
 	item: SessionItem = {
@@ -210,17 +217,21 @@ def get_last_id(session: Session):
 	return last["id"]
 
 
-def get_stats(session: Session):
+def get_stats(session: Session) -> SessionStats | None:
 	import datetime
 
 	cost = 0
 	input_tokens = 0
 	output_tokens = 0
 	llm_calls = 0
-	tools_called = {}
+	tools_called: dict[str, SessionToolUseStats] = {}
+
+	latencies = []
+	first_chunks = []
+	tps = []
 
 	if not session["items"] or not session["first"] or session["first"] not in session["items"]:
-		return
+		return None
 
 	_start = session["items"][session["first"]]["meta"]["timestamp"]
 	_end = session["items"][get_last_id(session)]["meta"]["end_time"]
@@ -240,8 +251,20 @@ def get_stats(session: Session):
 
 		if item["meta"]["input_tokens"] > max_input_tokens:
 			max_input_tokens = item["meta"]["input_tokens"]
+
 		if item["meta"]["output_tokens"] > max_output_tokens:
 			max_output_tokens = item["meta"]["output_tokens"]
+
+		if item["meta"]["time_to_first_chunk"] > 0:
+			first_chunks.append(item["meta"]["time_to_first_chunk"])
+
+		if item["meta"]["inter_chunk_latency"] > 0:
+			latencies.append(item["meta"]["inter_chunk_latency"])
+
+		if item["meta"]["output_tokens"] > 0:
+			tps.append(
+				item["meta"]["output_tokens"] / (item["meta"]["end_time"] - item["meta"]["start_time"])
+			)
 
 		for content_part in item["content"]:
 			if content_part["type"] != "tool_use":
@@ -250,24 +273,22 @@ def get_stats(session: Session):
 			result = content_part["result"]
 
 			if name not in tools_called:
-				tools_called[name] = {
-					"called_count": 0,
-					"empty_result_count": 0,
-					"error_count": 0,
-				}
+				tools_called[name] = SessionToolUseStats(
+					called_count=0,
+					error_count=0,
+					empty_result_count=0,
+				)
 			tools_called[name]["called_count"] += 1
 
 			if result is None or result == "" or result == "null" or result == "[]" or result == "{}":
 				tools_called[name]["empty_result_count"] += 1
 
-			if (
-				content_part["status"] == "error"
-				or isinstance(result, str)
-				and ("Error" in result or "error" in result)
+			if content_part["status"] == "error" or (
+				isinstance(result, str) and ("Error" in result or "error" in result)
 			):
 				tools_called[name]["error_count"] += 1
 
-	return dict(
+	return SessionStats(
 		cost=cost,
 		total_input_tokens=input_tokens,
 		total_output_tokens=output_tokens,
@@ -278,6 +299,9 @@ def get_stats(session: Session):
 		max_input_tokens=max_input_tokens,
 		max_output_tokens=max_output_tokens,
 		llm_calls=llm_calls,
+		time_to_first_chunk=sum(first_chunks) / (len(first_chunks) if first_chunks else 1),
+		inter_chunk_latency=sum(latencies) / (len(latencies) if latencies else 1),
+		tokens_per_second=sum(tps) / (len(tps) if tps else 1),
 	)
 
 
@@ -366,8 +390,7 @@ def to_content(query: str | list[Any]) -> list[UserContent]:
 			if is_user_content(q):
 				content.append(q)
 				continue
-			else:
-				q = utils.json_dumps(q)[0]
+			q = utils.json_dumps(q)[0]
 
 		c = TextContent(type="text", text=q)
 		if q.startswith("data:application/"):
@@ -410,10 +433,10 @@ def get_provider(model: str) -> Provider | None:
 	if model.startswith("openai"):
 		return "OpenAI"
 
-	elif model.startswith("anthropic"):
+	if model.startswith("anthropic"):
 		return "Anthropic"
 
-	elif model.startswith("gemini"):
+	if model.startswith("gemini"):
 		return "Google"
 	
 	elif any(model.startswith(prefix) for prefix in ["local/", "ollama/", "together_ai/", "vllm/", "openai/"]):
